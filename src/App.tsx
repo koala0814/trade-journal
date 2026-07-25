@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from './lib/AuthContext.tsx';
-import { Home, LineChart, Target, LogOut, Menu } from 'lucide-react';
+import { Home, LineChart, Target, LogOut, Menu, PlusCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard.tsx';
 import Analytics from './components/Analytics.tsx';
 import Milestones from './components/Milestones.tsx';
 import StickyNote from './components/StickyNote.tsx';
 import LoginScreen from './components/LoginScreen.tsx';
+import TradeLogger from './components/TradeLogger.tsx';
 
 export default function App() {
   const { user, loading, logOut } = useAuth();
@@ -22,14 +23,16 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentTab) {
-      case 'dashboard': return <Dashboard />;
+      case 'dashboard': return <Dashboard onNavigateToLogger={() => setCurrentTab('logger')} />;
       case 'analytics': return <Analytics />;
+      case 'logger': return <TradeLogger onNavigateToDashboard={() => setCurrentTab('dashboard')} />;
       case 'milestones': return <Milestones />;
-      default: return <Dashboard />;
+      default: return <Dashboard onNavigateToLogger={() => setCurrentTab('logger')} />;
     }
   };
 
   const navItems = [
+    { id: 'logger', label: 'Log Trade', icon: PlusCircle },
     { id: 'analytics', label: 'Analytics', icon: LineChart },
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'milestones', label: 'Milestones', icon: Target },

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext.tsx';
-import { ArrowUpRight, ArrowDownRight, Target, StickyNote, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Target, StickyNote, Trash2, PlusCircle } from 'lucide-react';
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigateToLogger }: { onNavigateToLogger?: () => void }) {
   const { getToken } = useAuth();
   const [stats, setStats] = useState({ totalPnL: 0, winRate: 0, totalTrades: 0 });
   const [trades, setTrades] = useState<any[]>([]);
@@ -71,6 +71,10 @@ export default function Dashboard() {
     }
   };
 
+  const grossProfit = trades.reduce((sum, t) => sum + (Number(t.profit || 0) > 0 ? Number(t.profit || 0) : 0), 0);
+  const grossLoss = trades.reduce((sum, t) => sum + (Number(t.profit || 0) < 0 ? Math.abs(Number(t.profit || 0)) : 0), 0);
+  const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : (grossProfit > 0 ? '∞' : '0.00');
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -107,7 +111,9 @@ export default function Dashboard() {
             <Target className="w-3 h-3 text-[#8b949e]" />
           </div>
           <div className="text-2xl font-bold text-[#e6edf3]">{stats.winRate.toFixed(1)}%</div>
-          <p className="text-[10px] text-indigo-400 mt-1 font-mono">↑ 2.1% trend</p>
+          <p className="text-[10px] text-[#8b949e] mt-1 font-mono">
+            {stats.totalTrades > 0 ? `${stats.totalTrades} total trade${stats.totalTrades === 1 ? '' : 's'}` : 'No trades logged'}
+          </p>
         </div>
         <div className="bg-[#161b22] p-4 rounded-xl border border-[#30363d]">
           <div className="text-xs text-[#8b949e] mb-1 flex justify-between items-center">
@@ -131,24 +137,37 @@ export default function Dashboard() {
           <div className="text-xs text-[#8b949e] mb-1 flex justify-between items-center">
             <span>Profit Factor</span>
           </div>
-          <div className="text-2xl font-bold text-[#e6edf3]">2.14</div>
-          <p className="text-[10px] text-[#8b949e] mt-1 font-mono">Alpha Strategy</p>
+          <div className="text-2xl font-bold text-[#e6edf3]">{profitFactor}</div>
+          <p className="text-[10px] text-[#8b949e] mt-1 font-mono">
+            {grossLoss > 0 ? `Win/Loss: $${grossProfit.toFixed(0)} / $${grossLoss.toFixed(0)}` : 'Calculated ratio'}
+          </p>
         </div>
       </div>
 
       <div className="bg-[#161b22] rounded-xl border border-[#30363d] overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="p-4 border-b border-[#30363d] flex justify-between items-center">
           <h2 className="text-lg font-bold text-[#e6edf3]">Recent Trades</h2>
-          {trades.length > 0 && (
-            <button
-              onClick={handleClearAllTrades}
-              disabled={isDeleting}
-              className="flex items-center gap-1.5 px-3 py-1 bg-[#f851491a] hover:bg-[#f8514933] text-[#f85149] rounded border border-[#f851494d] text-xs font-semibold transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Clear All Trades
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {onNavigateToLogger && (
+              <button
+                onClick={onNavigateToLogger}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-semibold transition-colors"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                Log Trade
+              </button>
+            )}
+            {trades.length > 0 && (
+              <button
+                onClick={handleClearAllTrades}
+                disabled={isDeleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f851491a] hover:bg-[#f8514933] text-[#f85149] rounded border border-[#f851494d] text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear All
+              </button>
+            )}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-max">
@@ -165,7 +184,18 @@ export default function Dashboard() {
             <tbody className="text-xs font-mono">
               {trades.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-[#8b949e] font-sans">No trades recorded yet.</td>
+                  <td colSpan={6} className="p-12 text-center text-[#8b949e] font-sans">
+                    <p className="mb-3">No trades recorded yet.</p>
+                    {onNavigateToLogger && (
+                      <button
+                        onClick={onNavigateToLogger}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        Log Your First Trade
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ) : (
                 trades.slice(0, 10).map((trade) => (

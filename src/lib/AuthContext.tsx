@@ -15,6 +15,7 @@ interface AuthContextType {
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  signInAsGuest: () => void;
   logOut: () => Promise<void>;
   getToken: () => Promise<string | null>;
 }
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signInWithEmail: async () => {},
   signUpWithEmail: async () => {},
+  signInAsGuest: () => {},
   logOut: async () => {},
   getToken: async () => null,
 });
@@ -33,13 +35,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const createGuestUserObj = (uid: string) => ({
+    uid,
+    email: 'guest@tradelog.app',
+    displayName: 'Guest Trader',
+    getIdToken: async () => `guest-token-${uid}`,
+  });
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      setUser(user);
-      if (user) {
-        // Sync user to our database
+    const savedGuest = localStorage.getItem('tradelog_guest_user');
+    if (savedGuest) {
+      try {
+        const { uid } = JSON.parse(savedGuest);
+        const guestObj = createGuestUserObj(uid);
+        setUser(guestObj as any);
+        setLoading(false);
+        return;
+      } catch (e) {
+        localStorage.removeItem('tradelog_guest_user');
+      }
+    }
+
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
         try {
-          const token = await user.getIdToken();
+          const token = await currentUser.getIdToken();
           await fetch('/api/auth/sync-user', {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` }
@@ -58,13 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await signInWithPopup(auth, googleAuthProvider);
     } catch (error: any) {
       console.error('Sign in error:', error);
-      if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
-        alert('Authentication popup was closed. Please try again.');
-      } else if (error.code === 'auth/unauthorized-domain') {
-        alert('Google Sign-In is restricted to registered domains. Please use Email/Password login or set up your Firebase keys.');
-      } else {
-        alert('Failed to sign in: ' + error.message);
-      }
+      throw error;
     }
   };
 
@@ -79,17 +94,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const signInAsGuest = () => {
+    const existing = localStorage.getItem('tradelog_guest_user');
+    let uid = 'guest_default';
+    if (existing) {
+      try { uid = JSON.parse(existing).uid; } catch(e) {}
+    } else {
+      uid = 'guest_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('tradelog_guest_user', JSON.stringify({ uid }));
+    }
+    const guestUser = createGuestUserObj(uid);
+    setUser(guestUser as any);
+  };
+
   const logOut = async () => {
-    await signOut(auth);
+    localStorage.removeItem('tradelog_guest_user');
+    await signOut(auth).catch(() => {});
+    setUser(null);
   };
 
   const getToken = async () => {
-    if (!auth.currentUser) return null;
-    return await auth.currentUser.getIdToken();
+    if (!user) return null;
+    return await user.getIdToken();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signInWithEmail, signUpWithEmail, logOut, getToken }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signInWithEmail, signUpWithEmail, signInAsGuest, logOut, getToken }}>
       {children}
     </AuthContext.Provider>
   );
