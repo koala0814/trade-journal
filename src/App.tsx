@@ -5,9 +5,10 @@ import Dashboard from './components/Dashboard.tsx';
 import Analytics from './components/Analytics.tsx';
 import Milestones from './components/Milestones.tsx';
 import StickyNote from './components/StickyNote.tsx';
+import LoginScreen from './components/LoginScreen.tsx';
 
 export default function App() {
-  const { user, loading, signIn, logOut } = useAuth();
+  const { user, loading, logOut } = useAuth();
   const [currentTab, setCurrentTab] = useState('analytics');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -16,23 +17,7 @@ export default function App() {
   }
 
   if (!user) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#0d1117] text-[#e6edf3] p-4">
-        <div className="bg-[#161b22] p-8 rounded-xl border border-[#30363d] max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-[#161b22] text-[#e6edf3] rounded-xl flex items-center justify-center mx-auto mb-6">
-            <LineChart className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl font-bold text-[#e6edf3] mb-2 uppercase tracking-tight">TradeLog</h1>
-          <p className="text-[#8b949e] mb-8 font-mono text-sm">Professional trading journal & analytics</p>
-          <button 
-            onClick={signIn}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-600/90 text-white rounded-lg font-bold uppercase tracking-wider transition-colors"
-          >
-            Connect & Login
-          </button>
-        </div>
-      </div>
-    );
+    return <LoginScreen />;
   }
 
   const renderContent = () => {
